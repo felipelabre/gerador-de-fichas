@@ -120,7 +120,7 @@ if csv_file:
                 doc.add_paragraph(f"Cidade: {cidade}")
                 doc.add_paragraph(f"Telefone: {telefone}")
                 doc.add_paragraph(
-                    f"Data de nascimento / Idade: {nascimento} / {idade}"
+                    f"Data de nascimento / Idade: {nascimento} - ({idade} anos)"
                 )
                 doc.add_paragraph(f"Tamanho da camiseta: {camiseta}")
                 doc.add_paragraph(f"Ministérios desejados: {ministerios}")
