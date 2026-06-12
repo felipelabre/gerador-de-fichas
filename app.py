@@ -114,43 +114,43 @@ if csv_file:
                 pastoral = row.get(col_pastoral, "")
                 sacramentos = row.get(col_sacramentos, "")
 
-                idade = calcular_idade(nascimento)
+                                idade = calcular_idade(nascimento)
 
                 p = doc.add_paragraph()
-p.add_run("Nome: ").bold = True
-p.add_run(str(nome))
+                p.add_run("Nome: ").bold = True
+                p.add_run(str(nome))
 
-p = doc.add_paragraph()
-p.add_run("Cidade: ").bold = True
-p.add_run(str(cidade))
+                p = doc.add_paragraph()
+                p.add_run("Cidade: ").bold = True
+                p.add_run(str(cidade))
 
-p = doc.add_paragraph()
-p.add_run("Telefone: ").bold = True
-p.add_run(str(telefone))
+                p = doc.add_paragraph()
+                p.add_run("Telefone: ").bold = True
+                p.add_run(str(telefone))
 
-p = doc.add_paragraph()
-p.add_run("Data de nascimento / Idade: ").bold = True
-p.add_run(f"{nascimento} - ({idade} anos)")
+                p = doc.add_paragraph()
+                p.add_run("Data de nascimento / Idade: ").bold = True
+                p.add_run(f"{nascimento} - ({idade} anos)")
 
-p = doc.add_paragraph()
-p.add_run("Tamanho da camiseta: ").bold = True
-p.add_run(str(camiseta))
+                p = doc.add_paragraph()
+                p.add_run("Tamanho da camiseta: ").bold = True
+                p.add_run(str(camiseta))
 
-p = doc.add_paragraph()
-p.add_run("Ministérios desejados: ").bold = True
-p.add_run(str(ministerios))
+                p = doc.add_paragraph()
+                p.add_run("Ministérios desejados: ").bold = True
+                p.add_run(str(ministerios))
 
-p = doc.add_paragraph()
-p.add_run("Já serviu em acampamentos: ").bold = True
-p.add_run(str(serviu))
+                p = doc.add_paragraph()
+                p.add_run("Já serviu em acampamentos: ").bold = True
+                p.add_run(str(serviu))
 
-p = doc.add_paragraph()
-p.add_run("Participa de alguma Pastoral ou Movimento: ").bold = True
-p.add_run(str(pastoral))
+                p = doc.add_paragraph()
+                p.add_run("Participa de alguma Pastoral ou Movimento: ").bold = True
+                p.add_run(str(pastoral))
 
-p = doc.add_paragraph()
-p.add_run("Sacramentos: ").bold = True
-p.add_run(str(sacramentos))
+                p = doc.add_paragraph()
+                p.add_run("Sacramentos: ").bold = True
+                p.add_run(str(sacramentos))
 
                 doc.add_paragraph("")
                 doc.add_paragraph("FOTO")
