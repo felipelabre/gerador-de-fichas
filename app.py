@@ -66,7 +66,7 @@ def buscar_coluna(df, possibilidades):
 if csv_file:
 
     try:
-        df = pd.read_csv(csv_file)
+        df = pd.read_csv(csv_file, sep=";")
 
         st.success(f"{len(df)} inscrições carregadas.")
 
