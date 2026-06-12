@@ -52,21 +52,11 @@ def calcular_idade(data_nascimento):
         return ""
 
 
-def buscar_coluna(df, possibilidades):
-    for col in df.columns:
-        nome = col.lower().strip()
-
-        for p in possibilidades:
-            if p in nome:
-                return col
-
-    return None
-
-
 if csv_file:
 
     try:
-        df = pd.read_csv(csv_file, sep=";")
+
+        df = pd.read_csv(csv_file, sep=";", encoding="utf-8-sig")
 
         st.success(f"{len(df)} inscrições carregadas.")
 
@@ -82,19 +72,27 @@ if csv_file:
                     logo_temp = tmp.name
 
             col_nome = "Nome"
-col_cidade = "Cidade"
-col_telefone = "Celular"
-col_nascimento = "Data de Nascimento"
+            col_cidade = "Cidade"
+            col_telefone = "Celular"
+            col_nascimento = "Data de Nascimento"
 
-col_camiseta = "Qual o tamanho da sua camiseta?"
+            col_camiseta = "Qual o tamanho da sua camiseta?"
 
-col_ministerios = "A coordenação do acampamento é a responsável por montar as equipes de trabalho. Mas, gostaríamos de receber a sua opinião. Assinale até 3 ministérios que você gostaria de servir. "
+            col_ministerios = (
+                "A coordenação do acampamento é a responsável por montar as equipes "
+                "de trabalho. Mas, gostaríamos de receber a sua opinião. "
+                "Assinale até 3 ministérios que você gostaria de servir. "
+            )
 
-col_serviu = "Já serviu em acampamentos? Se sim, quais ministérios?"
+            col_serviu = "Já serviu em acampamentos? Se sim, quais ministérios?"
 
-col_pastoral = "Participa de alguma Pastoral ou Movimento? Se sim, qual:"
+            col_pastoral = (
+                "Participa de alguma Pastoral ou Movimento? Se sim, qual:"
+            )
 
-col_sacramentos = "Quais Sacramentos possui (batismo, eucaristia, crisma, matrimônio e ordem)?"
+            col_sacramentos = (
+                "Quais Sacramentos possui (batismo, eucaristia, crisma, matrimônio e ordem)?"
+            )
 
             for i, row in df.iterrows():
 
@@ -106,16 +104,15 @@ col_sacramentos = "Quais Sacramentos possui (batismo, eucaristia, crisma, matrim
 
                 doc.add_heading(titulo_acampamento, level=1)
 
-                nome = row[col_nome] if col_nome else ""
-                cidade = row[col_cidade] if col_cidade else ""
-                telefone = row[col_telefone] if col_telefone else ""
-                nascimento = row[col_nascimento] if col_nascimento else ""
-                camiseta = row[col_camiseta] if col_camiseta else ""
-                ministerios = row[col_ministerios] if col_ministerios else ""
-                dificuldade = row[col_dificuldade] if col_dificuldade else ""
-                serviu = row[col_serviu] if col_serviu else ""
-                pastoral = row[col_pastoral] if col_pastoral else ""
-                sacramentos = row[col_sacramentos] if col_sacramentos else ""
+                nome = row.get(col_nome, "")
+                cidade = row.get(col_cidade, "")
+                telefone = row.get(col_telefone, "")
+                nascimento = row.get(col_nascimento, "")
+                camiseta = row.get(col_camiseta, "")
+                ministerios = row.get(col_ministerios, "")
+                serviu = row.get(col_serviu, "")
+                pastoral = row.get(col_pastoral, "")
+                sacramentos = row.get(col_sacramentos, "")
 
                 idade = calcular_idade(nascimento)
 
@@ -127,14 +124,9 @@ col_sacramentos = "Quais Sacramentos possui (batismo, eucaristia, crisma, matrim
                 )
                 doc.add_paragraph(f"Tamanho da camiseta: {camiseta}")
                 doc.add_paragraph(f"Ministérios desejados: {ministerios}")
+                doc.add_paragraph(f"Já serviu em acampamentos: {serviu}")
                 doc.add_paragraph(
-                    f"Dificuldade em qual ministério: {dificuldade}"
-                )
-                doc.add_paragraph(
-                    f"Já serviu em acampamento? Qual(is) ministério(s)?: {serviu}"
-                )
-                doc.add_paragraph(
-                    f"Participa de alguma Pastoral ou Movimento?: {pastoral}"
+                    f"Participa de alguma Pastoral ou Movimento: {pastoral}"
                 )
                 doc.add_paragraph(f"Sacramentos: {sacramentos}")
 
@@ -145,7 +137,9 @@ col_sacramentos = "Quais Sacramentos possui (batismo, eucaristia, crisma, matrim
                 doc.add_paragraph("")
                 doc.add_paragraph("")
                 doc.add_paragraph("")
-                doc.add_paragraph("____________________________________")
+                doc.add_paragraph(
+                    "________________________________________"
+                )
 
             output_path = "fichas_acampamento.docx"
             doc.save(output_path)
