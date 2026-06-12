@@ -81,16 +81,20 @@ if csv_file:
                     tmp.write(logo_file.read())
                     logo_temp = tmp.name
 
-            col_nome = buscar_coluna(df, ["nome"])
-            col_cidade = buscar_coluna(df, ["cidade"])
-            col_telefone = buscar_coluna(df, ["telefone", "celular", "whatsapp"])
-            col_nascimento = buscar_coluna(df, ["nascimento"])
-            col_camiseta = buscar_coluna(df, ["camiseta"])
-            col_ministerios = buscar_coluna(df, ["minist"])
-            col_dificuldade = buscar_coluna(df, ["dificuldade"])
-            col_serviu = buscar_coluna(df, ["serviu"])
-            col_pastoral = buscar_coluna(df, ["pastoral", "movimento"])
-            col_sacramentos = buscar_coluna(df, ["sacramento"])
+            col_nome = "Nome"
+col_cidade = "Cidade"
+col_telefone = "Celular"
+col_nascimento = "Data de Nascimento"
+
+col_camiseta = "Qual o tamanho da sua camiseta?"
+
+col_ministerios = "A coordenação do acampamento é a responsável por montar as equipes de trabalho. Mas, gostaríamos de receber a sua opinião. Assinale até 3 ministérios que você gostaria de servir. "
+
+col_serviu = "Já serviu em acampamentos? Se sim, quais ministérios?"
+
+col_pastoral = "Participa de alguma Pastoral ou Movimento? Se sim, qual:"
+
+col_sacramentos = "Quais Sacramentos possui (batismo, eucaristia, crisma, matrimônio e ordem)?"
 
             for i, row in df.iterrows():
 
