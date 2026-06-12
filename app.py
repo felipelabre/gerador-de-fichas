@@ -28,7 +28,7 @@ csv_file = st.file_uploader(
 
 titulo_acampamento = st.text_input(
     "Título do Acampamento",
-    value="Ficha do Acampante"
+    value="Ficha do Servo"
 )
 
 
