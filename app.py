@@ -14,8 +14,6 @@ st.set_page_config(
 
 st.title("📄 Gerador de Fichas")
 
-st.markdown("Faça upload da logo (opcional) e do CSV das inscrições.")
-
 logo_file = st.file_uploader(
     "Logo do Acampamento (opcional)",
     type=["png", "jpg", "jpeg"]
@@ -28,7 +26,7 @@ csv_file = st.file_uploader(
 
 titulo_acampamento = st.text_input(
     "Título do Acampamento",
-    value="Ficha do Servo"
+    value="Ficha do Acampante"
 )
 
 
@@ -56,7 +54,11 @@ if csv_file:
 
     try:
 
-        df = pd.read_csv(csv_file, sep=";", encoding="utf-8-sig")
+        df = pd.read_csv(
+            csv_file,
+            sep=";",
+            encoding="utf-8-sig"
+        )
 
         st.success(f"{len(df)} inscrições carregadas.")
 
@@ -84,7 +86,9 @@ if csv_file:
                 "Assinale até 3 ministérios que você gostaria de servir. "
             )
 
-            col_serviu = "Já serviu em acampamentos? Se sim, quais ministérios?"
+            col_serviu = (
+                "Já serviu em acampamentos? Se sim, quais ministérios?"
+            )
 
             col_pastoral = (
                 "Participa de alguma Pastoral ou Movimento? Se sim, qual:"
@@ -114,7 +118,7 @@ if csv_file:
                 pastoral = row.get(col_pastoral, "")
                 sacramentos = row.get(col_sacramentos, "")
 
-                                idade = calcular_idade(nascimento)
+                idade = calcular_idade(nascimento)
 
                 p = doc.add_paragraph()
                 p.add_run("Nome: ").bold = True
