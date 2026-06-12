@@ -116,19 +116,41 @@ if csv_file:
 
                 idade = calcular_idade(nascimento)
 
-                doc.add_paragraph(f"Nome: {nome}")
-                doc.add_paragraph(f"Cidade: {cidade}")
-                doc.add_paragraph(f"Telefone: {telefone}")
-                doc.add_paragraph(
-                    f"Data de nascimento: {nascimento} - ({idade} anos)"
-                )
-                doc.add_paragraph(f"Tamanho da camiseta: {camiseta}")
-                doc.add_paragraph(f"Ministérios desejados: {ministerios}")
-                doc.add_paragraph(f"Já serviu em acampamentos: {serviu}")
-                doc.add_paragraph(
-                    f"Participa de alguma Pastoral ou Movimento: {pastoral}"
-                )
-                doc.add_paragraph(f"Sacramentos: {sacramentos}")
+                p = doc.add_paragraph()
+p.add_run("Nome: ").bold = True
+p.add_run(str(nome))
+
+p = doc.add_paragraph()
+p.add_run("Cidade: ").bold = True
+p.add_run(str(cidade))
+
+p = doc.add_paragraph()
+p.add_run("Telefone: ").bold = True
+p.add_run(str(telefone))
+
+p = doc.add_paragraph()
+p.add_run("Data de nascimento / Idade: ").bold = True
+p.add_run(f"{nascimento} - ({idade} anos)")
+
+p = doc.add_paragraph()
+p.add_run("Tamanho da camiseta: ").bold = True
+p.add_run(str(camiseta))
+
+p = doc.add_paragraph()
+p.add_run("Ministérios desejados: ").bold = True
+p.add_run(str(ministerios))
+
+p = doc.add_paragraph()
+p.add_run("Já serviu em acampamentos: ").bold = True
+p.add_run(str(serviu))
+
+p = doc.add_paragraph()
+p.add_run("Participa de alguma Pastoral ou Movimento: ").bold = True
+p.add_run(str(pastoral))
+
+p = doc.add_paragraph()
+p.add_run("Sacramentos: ").bold = True
+p.add_run(str(sacramentos))
 
                 doc.add_paragraph("")
                 doc.add_paragraph("FOTO")
