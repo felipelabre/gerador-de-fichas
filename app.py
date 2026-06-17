@@ -157,10 +157,10 @@ if csv_file:
                 tabela = doc.add_table(rows=0, cols=2)
                 tabela.style = "Table Grid"
 
-    if idade != "":
-    nascimento_texto = f"{nascimento} ({idade} anos)"
-else:
-    nascimento_texto = str(nascimento)
+            if idade != "":
+            nascimento_texto = f"{nascimento} ({idade} anos)"
+                else:
+                nascimento_texto = str(nascimento)
 
 campos = [
     ("Cidade", cidade),
