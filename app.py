@@ -32,9 +32,6 @@ titulo_acampamento = st.text_input(
 
 def calcular_idade(data_nascimento):
     try:
-        if pd.isna(data_nascimento):
-            return ""
-
         nascimento = pd.to_datetime(
             data_nascimento,
             dayfirst=True,
@@ -68,6 +65,8 @@ if csv_file:
                 encoding="utf-8-sig"
             )
         except:
+            csv_file.seek(0)
+
             df = pd.read_csv(
                 csv_file,
                 sep=";",
@@ -83,7 +82,10 @@ if csv_file:
             logo_temp = None
 
             if logo_file:
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+                with tempfile.NamedTemporaryFile(
+                    delete=False,
+                    suffix=".png"
+                ) as tmp:
                     tmp.write(logo_file.read())
                     logo_temp = tmp.name
 
@@ -95,9 +97,8 @@ if csv_file:
             col_camiseta = "Qual o tamanho da sua camiseta?"
 
             col_ministerios = (
-                "A coordenação do acampamento é a responsável por montar as equipes "
-                "de trabalho. Mas, gostaríamos de receber a sua opinião. "
-                "Assinale até 3 ministérios que você gostaria de servir. "
+                "A coordenação do acampamento é a responsável por montar as equipes de trabalho. "
+                "Mas, gostaríamos de receber a sua opinião. Assinale até 3 ministérios que você gostaria de servir. "
             )
 
             col_serviu = (
@@ -118,9 +119,15 @@ if csv_file:
                     doc.add_page_break()
 
                 if logo_temp:
-                    doc.add_picture(logo_temp, width=Inches(2))
+                    doc.add_picture(
+                        logo_temp,
+                        width=Inches(2)
+                    )
 
-                doc.add_heading(titulo_acampamento, level=1)
+                doc.add_heading(
+                    titulo_acampamento,
+                    level=1
+                )
 
                 nome = row.get(col_nome, "")
                 cidade = row.get(col_cidade, "")
@@ -150,11 +157,9 @@ if csv_file:
                 p.add_run("Data de nascimento / Idade: ").bold = True
 
                 if idade != "":
-                    texto_data = f"{nascimento} - ({idade} anos)"
+                    p.add_run(f"{nascimento} - ({idade} anos)")
                 else:
-                    texto_data = str(nascimento)
-
-                p.add_run(texto_data)
+                    p.add_run(str(nascimento))
 
                 p = doc.add_paragraph()
                 p.add_run("Tamanho da camiseta: ").bold = True
