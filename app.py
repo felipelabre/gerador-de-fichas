@@ -178,7 +178,7 @@ if csv_file:
                 linha[0].text = str(campo)
                 linha[1].text = str(valor)
 
-doc.add_paragraph("")
+            doc.add_paragraph("")
 
                 doc.add_paragraph("")
                 doc.add_paragraph("FOTO")
