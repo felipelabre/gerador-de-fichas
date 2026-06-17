@@ -53,9 +53,17 @@ def calcular_idade(data_nascimento):
 if csv_file:
 
     try:
-    df = pd.read_csv(csv_file, sep=";", encoding="utf-8-sig")
-except:
-    df = pd.read_csv(csv_file, sep=";", encoding="latin1")
+            df = pd.read_csv(
+                csv_file,
+                sep=";",
+                encoding="utf-8-sig"
+            )
+        except:
+            df = pd.read_csv(
+                csv_file,
+                sep=";",
+                encoding="latin1"
+            )
 
         st.success(f"{len(df)} inscrições carregadas.")
 
