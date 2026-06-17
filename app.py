@@ -180,14 +180,14 @@ if csv_file:
 
             doc.add_paragraph("")
 
-                doc.add_paragraph("")
-                doc.add_paragraph("FOTO")
-                doc.add_paragraph("")
-                doc.add_paragraph("")
-                doc.add_paragraph("")
-                doc.add_paragraph("")
-                doc.add_paragraph("")
-                doc.add_paragraph(
+            doc.add_paragraph("")
+            doc.add_paragraph("FOTO")
+            doc.add_paragraph("")
+            doc.add_paragraph("")
+            doc.add_paragraph("")
+            doc.add_paragraph("")
+            doc.add_paragraph("")
+            doc.add_paragraph(
                     "________________________________________"
                 )
 
