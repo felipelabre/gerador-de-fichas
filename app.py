@@ -53,6 +53,8 @@ def calcular_idade(data_nascimento):
 if csv_file:
 
     try:
+
+        try:
             df = pd.read_csv(
                 csv_file,
                 sep=";",
