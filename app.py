@@ -146,45 +146,39 @@ if csv_file:
 
                 idade = calcular_idade(nascimento)
 
-                p = doc.add_paragraph()
-                p.add_run("Nome: ").bold = True
-                p.add_run(str(nome))
+                nome_p = doc.add_paragraph()
+nome_p.alignment = 1
 
-                p = doc.add_paragraph()
-                p.add_run("Cidade: ").bold = True
-                p.add_run(str(cidade))
+run_nome = nome_p.add_run(str(nome))
+run_nome.bold = True
 
-                p = doc.add_paragraph()
-                p.add_run("Telefone: ").bold = True
-                p.add_run(str(telefone))
+doc.add_paragraph("")
 
-                p = doc.add_paragraph()
-                p.add_run("Data de nascimento / Idade: ").bold = True
+tabela = doc.add_table(rows=0, cols=2)
+tabela.style = "Table Grid"
 
-                if idade != "":
-                    p.add_run(f"{nascimento} - ({idade} anos)")
-                else:
-                    p.add_run(str(nascimento))
+if idade != "":
+    nascimento_texto = f"{nascimento} ({idade} anos)"
+else:
+    nascimento_texto = str(nascimento)
 
-                p = doc.add_paragraph()
-                p.add_run("Tamanho da camiseta: ").bold = True
-                p.add_run(str(camiseta))
+campos = [
+    ("Cidade", cidade),
+    ("Telefone", telefone),
+    ("Nascimento / Idade", nascimento_texto),
+    ("Tamanho Camiseta", camiseta),
+    ("Ministérios Desejados", ministerios),
+    ("Já Serviu", serviu),
+    ("Pastoral / Movimento", pastoral),
+    ("Sacramentos", sacramentos)
+]
 
-                p = doc.add_paragraph()
-                p.add_run("Ministérios desejados: ").bold = True
-                p.add_run(str(ministerios))
+for campo, valor in campos:
+    linha = tabela.add_row().cells
+    linha[0].text = str(campo)
+    linha[1].text = str(valor)
 
-                p = doc.add_paragraph()
-                p.add_run("Já serviu em acampamentos: ").bold = True
-                p.add_run(str(serviu))
-
-                p = doc.add_paragraph()
-                p.add_run("Participa de alguma Pastoral ou Movimento: ").bold = True
-                p.add_run(str(pastoral))
-
-                p = doc.add_paragraph()
-                p.add_run("Sacramentos: ").bold = True
-                p.add_run(str(sacramentos))
+doc.add_paragraph("")
 
                 doc.add_paragraph("")
                 doc.add_paragraph("FOTO")
