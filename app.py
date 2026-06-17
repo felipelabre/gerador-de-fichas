@@ -147,17 +147,17 @@ if csv_file:
                 idade = calcular_idade(nascimento)
 
                 nome_p = doc.add_paragraph()
-nome_p.alignment = 1
+                nome_p.alignment = 1
 
-run_nome = nome_p.add_run(str(nome))
-run_nome.bold = True
+                run_nome = nome_p.add_run(str(nome))
+                run_nome.bold = True
 
-doc.add_paragraph("")
+                doc.add_paragraph("")
 
-tabela = doc.add_table(rows=0, cols=2)
-tabela.style = "Table Grid"
+    tabela = doc.add_table(rows=0, cols=2)
+    tabela.style = "Table Grid"
 
-if idade != "":
+    if idade != "":
     nascimento_texto = f"{nascimento} ({idade} anos)"
 else:
     nascimento_texto = str(nascimento)
