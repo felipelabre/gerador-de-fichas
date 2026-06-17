@@ -159,7 +159,7 @@ if csv_file:
 
             if idade != "":
                 nascimento_texto = f"{nascimento} ({idade} anos)"
-                else:
+            else:
                     nascimento_texto = str(nascimento)
 
 campos = [
