@@ -32,17 +32,24 @@ titulo_acampamento = st.text_input(
 
 def calcular_idade(data_nascimento):
     try:
-        nascimento = pd.to_datetime(data_nascimento, dayfirst=True)
+        if pd.isna(data_nascimento):
+            return ""
+
+        nascimento = pd.to_datetime(
+            data_nascimento,
+            dayfirst=True,
+            errors="coerce"
+        )
+
+        if pd.isna(nascimento):
+            return ""
+
         hoje = datetime.today()
 
-        idade = (
-            hoje.year
-            - nascimento.year
-            - (
-                (hoje.month, hoje.day)
-                < (nascimento.month, nascimento.day)
-            )
-        )
+        idade = hoje.year - nascimento.year
+
+        if (hoje.month, hoje.day) < (nascimento.month, nascimento.day):
+            idade -= 1
 
         return idade
 
@@ -141,7 +148,13 @@ if csv_file:
 
                 p = doc.add_paragraph()
                 p.add_run("Data de nascimento / Idade: ").bold = True
-                p.add_run(f"{nascimento} - ({idade} anos)")
+
+                if idade != "":
+                    texto_data = f"{nascimento} - ({idade} anos)"
+                else:
+                    texto_data = str(nascimento)
+
+                p.add_run(texto_data)
 
                 p = doc.add_paragraph()
                 p.add_run("Tamanho da camiseta: ").bold = True
