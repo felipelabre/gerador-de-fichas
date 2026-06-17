@@ -158,7 +158,7 @@ if csv_file:
                 tabela.style = "Table Grid"
 
             if idade != "":
-            nascimento_texto = f"{nascimento} ({idade} anos)"
+                nascimento_texto = f"{nascimento} ({idade} anos)"
                 else:
                 nascimento_texto = str(nascimento)
 
