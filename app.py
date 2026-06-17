@@ -154,8 +154,8 @@ if csv_file:
 
                 doc.add_paragraph("")
 
-    tabela = doc.add_table(rows=0, cols=2)
-    tabela.style = "Table Grid"
+                tabela = doc.add_table(rows=0, cols=2)
+                tabela.style = "Table Grid"
 
     if idade != "":
     nascimento_texto = f"{nascimento} ({idade} anos)"
