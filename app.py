@@ -119,15 +119,20 @@ if csv_file:
                     doc.add_page_break()
 
                 if logo_temp:
-                    doc.add_picture(
-                        logo_temp,
-                        width=Inches(2)
+                    p_logo = doc.add_paragraph()
+                    p_logo.alignment = 1
+
+                    run_logo = p_logo.add_run()
+                    run_logo.add_picture(
+                    logo_temp,
+                    width=Inches(2.2)
                     )
 
-                doc.add_heading(
-                    titulo_acampamento,
-                    level=1
-                )
+                titulo = doc.add_paragraph()
+                titulo.alignment = 1
+
+                run_titulo = titulo.add_run(titulo_acampamento)
+                run_titulo.bold = True
 
                 nome = row.get(col_nome, "")
                 cidade = row.get(col_cidade, "")
