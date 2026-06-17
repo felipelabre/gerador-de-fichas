@@ -26,7 +26,7 @@ csv_file = st.file_uploader(
 
 titulo_acampamento = st.text_input(
     "Título do Acampamento",
-    value="Ficha de Inscriçao do Servo - Resumida"
+    value="Ficha de Inscrição do Servo - Resumida"
 )
 
 
@@ -118,22 +118,25 @@ if csv_file:
                 if i > 0:
                     doc.add_page_break()
 
+                # Logo centralizada
                 if logo_temp:
                     p_logo = doc.add_paragraph()
                     p_logo.alignment = 1
 
                     run_logo = p_logo.add_run()
                     run_logo.add_picture(
-                    logo_temp,
-                    width=Inches(2.2)
+                        logo_temp,
+                        width=Inches(2.2)
                     )
 
+                # Título centralizado
                 titulo = doc.add_paragraph()
                 titulo.alignment = 1
 
                 run_titulo = titulo.add_run(titulo_acampamento)
                 run_titulo.bold = True
 
+                # Dados
                 nome = row.get(col_nome, "")
                 cidade = row.get(col_cidade, "")
                 telefone = row.get(col_telefone, "")
@@ -146,6 +149,7 @@ if csv_file:
 
                 idade = calcular_idade(nascimento)
 
+                # Nome grande
                 nome_p = doc.add_paragraph()
                 nome_p.alignment = 1
 
@@ -154,40 +158,42 @@ if csv_file:
 
                 doc.add_paragraph("")
 
+                # Tabela
                 tabela = doc.add_table(rows=0, cols=2)
                 tabela.style = "Table Grid"
 
-            if idade != "":
-                nascimento_texto = f"{nascimento} ({idade} anos)"
-            else:
+                if idade != "":
+                    nascimento_texto = f"{nascimento} ({idade} anos)"
+                else:
                     nascimento_texto = str(nascimento)
 
-            campos = [
-                ("Cidade", cidade),
-                ("Telefone", telefone),
-                ("Nascimento / Idade", nascimento_texto),
-                ("Tamanho Camiseta", camiseta),
-                ("Ministérios Desejados", ministerios),
-                ("Já Serviu", serviu),
-                ("Pastoral / Movimento", pastoral),
-                ("Sacramentos", sacramentos)
-]
-        
-            for campo, valor in campos:
-                linha = tabela.add_row().cells
-                linha[0].text = str(campo)
-                linha[1].text = str(valor)
+                campos = [
+                    ("Cidade", cidade),
+                    ("Telefone", telefone),
+                    ("Nascimento / Idade", nascimento_texto),
+                    ("Tamanho Camiseta", camiseta),
+                    ("Ministérios Desejados", ministerios),
+                    ("Já Serviu", serviu),
+                    ("Pastoral / Movimento", pastoral),
+                    ("Sacramentos", sacramentos)
+                ]
 
-            doc.add_paragraph("")
+                for campo, valor in campos:
+                    linha = tabela.add_row().cells
+                    linha[0].text = str(campo)
+                    linha[1].text = str(valor)
 
-            doc.add_paragraph("")
-            doc.add_paragraph("FOTO")
-            doc.add_paragraph("")
-            doc.add_paragraph("")
-            doc.add_paragraph("")
-            doc.add_paragraph("")
-            doc.add_paragraph("")
-            doc.add_paragraph(
+                doc.add_paragraph("")
+
+                # Espaço para foto
+                foto = doc.add_table(rows=1, cols=1)
+                foto.style = "Table Grid"
+
+                celula = foto.cell(0, 0)
+                celula.text = "\n\n\n\n\nFOTO\n\n\n\n\n"
+
+                doc.add_paragraph("")
+                doc.add_paragraph(
                     "________________________________________"
                 )
 
