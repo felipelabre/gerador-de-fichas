@@ -162,21 +162,21 @@ if csv_file:
             else:
                     nascimento_texto = str(nascimento)
 
-campos = [
-    ("Cidade", cidade),
-    ("Telefone", telefone),
-    ("Nascimento / Idade", nascimento_texto),
-    ("Tamanho Camiseta", camiseta),
-    ("Ministérios Desejados", ministerios),
-    ("Já Serviu", serviu),
-    ("Pastoral / Movimento", pastoral),
-    ("Sacramentos", sacramentos)
+            campos = [
+                ("Cidade", cidade),
+                ("Telefone", telefone),
+                ("Nascimento / Idade", nascimento_texto),
+                ("Tamanho Camiseta", camiseta),
+                ("Ministérios Desejados", ministerios),
+                ("Já Serviu", serviu),
+                ("Pastoral / Movimento", pastoral),
+                ("Sacramentos", sacramentos)
 ]
-
-for campo, valor in campos:
-    linha = tabela.add_row().cells
-    linha[0].text = str(campo)
-    linha[1].text = str(valor)
+        
+            for campo, valor in campos:
+                linha = tabela.add_row().cells
+                linha[0].text = str(campo)
+                linha[1].text = str(valor)
 
 doc.add_paragraph("")
 
