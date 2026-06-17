@@ -5,7 +5,7 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 from docx import Document
-from docx.shared import Inches
+from docx.shared import Inches, Pt  # Importado o Pt para controlar o tamanho
 
 st.set_page_config(
     page_title="Gerador de Fichas", page_icon="📄", layout="centered"
@@ -42,13 +42,11 @@ def calcular_idade(data_nascimento):
         return ""
 
 
-# Inicializa o estado da sessão para armazenar o arquivo gerado
 if "word_file" not in st.session_state:
     st.session_state.word_file = None
 
 if csv_file:
     try:
-        # Tenta ler o CSV
         try:
             df = pd.read_csv(csv_file, sep=";", encoding="utf-8-sig")
         except:
@@ -57,14 +55,12 @@ if csv_file:
 
         st.success(f"{len(df)} inscrições carregadas.")
 
-        # Botão para iniciar o processamento
         if st.button("Gerar Fichas"):
-            with st.spinner("Gerando o documento Word... Por favor, aguarde."):
+            with st.spinner("Gerando o documento Word com fontes ampliadas..."):
                 doc = Document()
                 logo_temp = None
 
                 if logo_file:
-                    # delete=False garante que o arquivo persista até o python-docx ler ele
                     with tempfile.NamedTemporaryFile(
                         delete=False, suffix=".png"
                     ) as tmp:
@@ -99,13 +95,14 @@ if csv_file:
                         run_logo = p_logo.add_run()
                         run_logo.add_picture(logo_temp, width=Inches(2.2))
 
-                    # Título centralizado
+                    # Título centralizado (Tamanho 14)
                     titulo = doc.add_paragraph()
                     titulo.alignment = 1
                     run_titulo = titulo.add_run(titulo_acampamento)
                     run_titulo.bold = True
+                    run_titulo.font.size = Pt(14)
 
-                    # Dados
+                    # Dados do Servo
                     nome = row.get(col_nome, "")
                     cidade = row.get(col_cidade, "")
                     telefone = row.get(col_telefone, "")
@@ -118,15 +115,16 @@ if csv_file:
 
                     idade = calcular_idade(nascimento)
 
-                    # Nome grande
+                    # Nome bem grande e destacado (Tamanho 24)
                     nome_p = doc.add_paragraph()
                     nome_p.alignment = 1
-                    run_nome = nome_p.add_run(str(nome))
+                    run_nome = nome_p.add_run(str(nome).upper())  # Coloquei em MAIÚSCULO para destacar ainda mais
                     run_nome.bold = True
+                    run_nome.font.size = Pt(24)
 
                     doc.add_paragraph("")
 
-                    # Tabela
+                    # Tabela de Dados Gerais
                     tabela = doc.add_table(rows=0, cols=2)
                     tabela.style = "Table Grid"
 
@@ -148,8 +146,17 @@ if csv_file:
 
                     for campo, valor in campos:
                         linha = tabela.add_row().cells
-                        linha[0].text = str(campo)
-                        linha[1].text = str(valor)
+                        
+                        # Coluna 0: Nome do Campo (Tamanho 13 + Negrito)
+                        p_campo = linha[0].paragraphs[0]
+                        run_campo = p_campo.add_run(str(campo))
+                        run_campo.bold = True
+                        run_campo.font.size = Pt(13)
+                        
+                        # Coluna 1: Valor do Campo (Tamanho 12)
+                        p_valor = linha[1].paragraphs[0]
+                        run_valor = p_valor.add_run(str(valor))
+                        run_valor.font.size = Pt(12)
 
                     doc.add_paragraph("")
 
@@ -157,26 +164,26 @@ if csv_file:
                     foto = doc.add_table(rows=1, cols=1)
                     foto.style = "Table Grid"
                     celula = foto.cell(0, 0)
-                    celula.text = "\n\n\n\n\nFOTO\n\n\n\n\n"
+                    
+                    p_foto = celula.paragraphs[0]
+                    p_foto.alignment = 1  # Centraliza o texto "FOTO"
+                    run_foto = p_foto.add_run("\n\n\n\n\nFOTO\n\n\n\n\n")
+                    run_foto.font.size = Pt(12)
 
                     doc.add_paragraph("")
                     doc.add_paragraph(
                         "________________________________________"
                     )
 
-                # Salva o arquivo em um buffer de memória (BytesIO)
                 bio = io.BytesIO()
                 doc.save(bio)
                 bio.seek(0)
 
-                # Guarda o arquivo no Session State para não sumir no próximo clique
                 st.session_state.word_file = bio.read()
 
-                # Limpa o arquivo temporário da logo se ele existir
                 if logo_temp and os.path.exists(logo_temp):
                     os.remove(logo_temp)
 
-        # Se o arquivo já foi gerado na sessão atual, exibe o botão de download de forma persistente
         if st.session_state.word_file is not None:
             st.download_button(
                 label="📥 Baixar Arquivo Word",
