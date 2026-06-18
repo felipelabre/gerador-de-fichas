@@ -5,13 +5,13 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 from docx import Document
-from docx.shared import Inches, Pt
+from docx.shared import Inches, Pt, Cm  # Importado Cm para ajustar as margens
 
 st.set_page_config(
     page_title="Gerador de Fichas", page_icon="📄", layout="centered"
 )
 
-st.title("📄 Gerador de Fichas + Fotos")
+st.title("📄 Gerador de Fichas (1 Página por Servo)")
 
 logo_file = st.file_uploader(
     "1. Logo do Acampamento (opcional)", type=["png", "jpg", "jpeg"]
@@ -19,9 +19,8 @@ logo_file = st.file_uploader(
 
 csv_file = st.file_uploader("2. Arquivo CSV das Inscrições", type=["csv"])
 
-# Novo uploader para selecionar múltiplas fotos de uma vez
 fotos_files = st.file_uploader(
-    "3. Selecione as Fotos dos Servos (Opcional - Nome do arquivo deve ser o nome do servo)",
+    "3. Selecione as Fotos dos Servos (Opcional)",
     type=["png", "jpg", "jpeg"],
     accept_multiple_files=True
 )
@@ -62,20 +61,25 @@ if csv_file:
 
         st.success(f"{len(df)} inscrições carregadas.")
 
-        # Cria um dicionário mapeando 'nome_do_servo_limpo' -> arquivo_da_foto
         dicionario_fotos = {}
         if fotos_files:
             for foto in fotos_files:
-                # Pega o nome do arquivo tirando a extensão (ex: "João Silva.jpg" -> "joão silva")
                 nome_sem_extensao = os.path.splitext(foto.name)[0].strip().lower()
                 dicionario_fotos[nome_sem_extensao] = foto
-            st.info(f"{len(dicionario_fotos)} fotos carregadas para cruzamento.")
+            st.info(f"{len(dicionario_fotos)} fotos carregadas.")
 
         if st.button("Gerar Fichas"):
-            with st.spinner("Gerando o documento Word com fotos..."):
+            with st.spinner("Gerando fichas formatadas para folha única..."):
                 doc = Document()
                 
-                # Tratamento do Logo do Acampamento
+                # AJUSTE DE MARGENS: Define margens estreitas (1.5 cm) para caber tudo na folha
+                sections = doc.sections
+                for section in sections:
+                    section.top_margin = Cm(1.5)
+                    section.bottom_margin = Cm(1.5)
+                    section.left_margin = Cm(1.5)
+                    section.right_margin = Cm(1.5)
+
                 logo_temp = None
                 if logo_file:
                     with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
@@ -99,19 +103,19 @@ if csv_file:
                     if i > 0:
                         doc.add_page_break()
 
-                    # 1. Logo centralizada
+                    # 1. Logo (Compactada para não empurrar o texto)
                     if logo_temp:
                         p_logo = doc.add_paragraph()
                         p_logo.alignment = 1
                         run_logo = p_logo.add_run()
-                        run_logo.add_picture(logo_temp, width=Inches(2.2))
+                        run_logo.add_picture(logo_temp, width=Inches(1.5))
 
-                    # 2. Título centralizado
+                    # 2. Título (Tamanho 12 para economizar espaço)
                     titulo = doc.add_paragraph()
                     titulo.alignment = 1
                     run_titulo = titulo.add_run(titulo_acampamento)
                     run_titulo.bold = True
-                    run_titulo.font.size = Pt(14)
+                    run_titulo.font.size = Pt(12)
 
                     # Dados do Servo
                     nome = str(row.get(col_nome, "")).strip()
@@ -126,14 +130,12 @@ if csv_file:
 
                     idade = calcular_idade(nascimento)
 
-                    # 3. Nome do Servo em destaque
+                    # 3. Nome do Servo (Tamanho 20 - Grande, mas controlado)
                     nome_p = doc.add_paragraph()
                     nome_p.alignment = 1
                     run_nome = nome_p.add_run(nome.upper())
                     run_nome.bold = True
-                    run_nome.font.size = Pt(24)
-
-                    doc.add_paragraph("")
+                    run_nome.font.size = Pt(20)
 
                     # 4. Tabela de Dados Gerais
                     tabela = doc.add_table(rows=0, cols=2)
@@ -161,15 +163,17 @@ if csv_file:
                         p_campo = linha[0].paragraphs[0]
                         run_campo = p_campo.add_run(str(campo))
                         run_campo.bold = True
-                        run_campo.font.size = Pt(13)
+                        run_campo.font.size = Pt(11)  # Reduzido levemente para segurança
                         
                         p_valor = linha[1].paragraphs[0]
                         run_valor = p_valor.add_run(str(valor))
-                        run_valor.font.size = Pt(12)
+                        run_valor.font.size = Pt(11)
 
-                    doc.add_paragraph("")
+                    # Pequeno espaçamento antes da foto
+                    p_espaco = doc.add_paragraph()
+                    p_espaco.paragraph_format.space_before = Pt(6)
 
-                    # 5. Box para a Foto (Buscando o arquivo correspondente)
+                    # 5. Box para a Foto Redimensionada (Ajustada para caber na página)
                     foto = doc.add_table(rows=1, cols=1)
                     foto.style = "Table Grid"
                     celula = foto.cell(0, 0)
@@ -178,34 +182,30 @@ if csv_file:
 
                     nome_chave = nome.lower()
                     
-                    # Verifica se a foto do servo foi enviada
                     if nome_chave in dicionario_fotos:
                         foto_file_obj = dicionario_fotos[nome_chave]
                         
-                        # Cria arquivo temporário para a foto do servo conseguir ser lida pelo python-docx
                         ext = os.path.splitext(foto_file_obj.name)[1]
                         with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as f_tmp:
                             f_tmp.write(foto_file_obj.getvalue())
                             foto_temp_path = f_tmp.name
                         
-                        # Adiciona a foto no tamanho de 2.0 polegadas (ajuste se quiser maior ou menor)
+                        # REDIMENSIONAMENTO CRÍTICO: Reduzido para 1.1 polegadas para travar em 1 folha
                         run_foto = p_foto.add_run()
-                        run_foto.add_picture(foto_temp_path, width=Inches(2.0))
+                        run_foto.add_picture(foto_temp_path, width=Inches(1.1))
                         
-                        # Remove a foto temporária imediatamente após o uso
                         if os.path.exists(foto_temp_path):
                             os.remove(foto_temp_path)
                     else:
-                        # Fallback caso não encontre a foto com o nome do servo
-                        run_foto = p_foto.add_run("\n\n\n\n\nFOTO NÃO ENCONTRADA\n\n\n\n\n")
-                        run_foto.font.size = Pt(11)
+                        # Texto menor e com menos quebras de linha para o "Não encontrada"
+                        run_foto = p_foto.add_run("\n\nFOTO NÃO ENCONTRADA\n\n")
+                        run_foto.font.size = Pt(10)
 
-                    doc.add_paragraph("")
-                    doc.add_paragraph(
-                        "________________________________________"
-                    )
+                    # Linha final de assinatura/corte ajustada
+                    p_linha = doc.add_paragraph()
+                    p_linha.alignment = 1
+                    p_linha.add_run("\n________________________________________")
 
-                # Salva o arquivo Word final na memória
                 bio = io.BytesIO()
                 doc.save(bio)
                 bio.seek(0)
