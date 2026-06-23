@@ -13,12 +13,12 @@ st.set_page_config(
     page_title="Gerador de Fichas", page_icon="📄", layout="centered"
 )
 
-st.title("📄 Gerador de Fichas (Busca Direta)")
+st.title("📄 Gerador de Fichas (Precisão de Fotos)")
 
 st.markdown("""
 ### 📢 Como usar as Fotos pelo Google Drive:
 1. Deixe todas as fotos direto na pasta do **Google Drive** (sem subpastas).
-2. Garanta que o nome de cada arquivo seja o nome exato do servo (ex: `Nome do Servo.jpg` ou `Nome do Servo.png`).
+2. Garanta que o nome de cada arquivo seja o nome exato do servo (ex: `Nome do Servo.jpg`).
 3. Compartilhe a pasta como **"Qualquer pessoa com o link"** (Leitor).
 """)
 
@@ -48,7 +48,7 @@ def calcular_idade(data_nascimento):
         idade = hoje.year - nascimento.year
         if (hoje.month, hoje.day) < (nascimento.month, nascimento.day):
             idade -= 1
-        return idade
+        return iidade
     except:
         return ""
 
@@ -60,17 +60,22 @@ def extrair_id_pasta(url):
     return None
 
 
-# Função que tenta buscar e indexar varrendo a estrutura pública de visualização do Drive
-def obter_arquivos_da_pasta_drive(folder_id):
+# Nova função de varredura cirúrgica usando a API estruturada do Drive para pastas públicas
+def mapear_pasta_drive_total(folder_id):
     dict_fotos = {}
     try:
-        url_alt = f"https://drive.google.com/embeddedfolderview?id={folder_id}"
-        res_alt = requests.get(url_alt, timeout=15)
-        # Regex aprimorado para capturar nomes e IDs direto do HTML estruturado do Drive
-        matches_alt = re.findall(r'id="entry-([a-zA-Z0-9-_]+)".*?class="cl-name"[^>]*>([^<]+)', res_alt.text, re.DOTALL)
-        for file_id, name in matches_alt:
-            nome_sem_extensao = os.path.splitext(name.strip())[0].strip().lower()
-            dict_fotos[nome_sem_extensao] = file_id
+        # Pede os metadados brutos da pasta ao Google de forma pública
+        url = f"https://docs.google.com/uc?export=list&id={folder_id}"
+        response = requests.get(url, timeout=15)
+        
+        if response.status_code == 200:
+            # Captura a lista real de arquivos injetada na página estruturada do Drive
+            dados_arquivos = re.findall(r'\["([a-zA-Z0-9-_]+)"\s*,\s*"([^"]+)"', response.text)
+            for file_id, name in dados_arquivos:
+                ext = os.path.splitext(name)[1].lower()
+                if ext in ['.jpg', '.jpeg', '.png']:
+                    nome_limpo = os.path.splitext(name.strip())[0].strip().lower()
+                    dict_fotos[nome_limpo] = file_id
     except:
         pass
     return dict_fotos
@@ -90,23 +95,24 @@ if csv_file:
         df = df.dropna(how='all')
         st.success(f"{len(df)} inscrições válidas carregadas.")
 
+        # Faz o mapeamento inicial absoluto das fotos
         dicionario_fotos_drive = {}
         id_pasta = extrair_id_pasta(pasta_drive_url) if pasta_drive_url else None
 
         if id_pasta:
-            with st.spinner("Conectando à pasta do Google Drive..."):
-                dicionario_fotos_drive = obter_arquivos_da_pasta_drive(id_pasta)
+            with st.spinner("Mapeando arquivos do Google Drive..."):
+                dicionario_fotos_drive = mapear_pasta_drive_total(id_pasta)
             
             if dicionario_fotos_drive:
-                st.info(f"Conectado! {len(dicionario_fotos_drive)} fotos pré-mapeadas.")
+                st.info(f"Sucesso! {len(dicionario_fotos_drive)} fotos identificadas e vinculadas aos nomes correspondentes.")
             else:
-                st.warning("⚠️ O Google limitou a listagem automática prévia. O sistema fará a busca individual direta por nome de cada servo ao clicar no botão.")
+                st.warning("⚠️ O Google impediu a listagem automática de segurança. Certifique-se de que a pasta está compartilhada como 'Qualquer pessoa com o link'.")
 
         if st.button("Gerar Fichas"):
             fotos_com_erro = []
             
             try:
-                with st.spinner("Processando fichas... Buscando e baixando imagens."):
+                with st.spinner("Gerando fichas... Como são 508 registros com imagens, isso vai levar de 2 a 4 minutos. Não feche a aba."):
                     doc = Document()
                     
                     sections = doc.sections
@@ -215,26 +221,13 @@ if csv_file:
                         p_foto.alignment = 1
 
                         nome_chave = nome.lower()
-                        id_foto_drive = dicionario_fotos_drive.get(nome_chave)
                         
-                        # ESTRATÉGIA DE BUSCA DINÂMICA CASO A LISTAGEM DO GOOGLE TENHA FALHADO
-                        id_encontrado = None
-                        if id_foto_drive:
-                            id_encontrado = id_foto_drive
-                        elif id_pasta:
-                            # Se a listagem falhou, tentamos forçar a varredura da foto individual pelo nome exato do servo via Web View
-                            try:
-                                url_busca = f"https://drive.google.com/embeddedfolderview?id={id_pasta}&q={nome_chave}"
-                                res_busca = requests.get(url_busca, timeout=5)
-                                match_id = re.search(r'id="entry-([a-zA-Z0-9-_]+)"', res_busca.text)
-                                if match_id:
-                                    id_encontrado = match_id.group(1)
-                            except:
-                                pass
+                        # CHECAGEM DE SEGURANÇA: Só baixa a imagem se o ID pertencer especificamente a este servo no dicionário
+                        id_foto_drive = dicionario_fotos_drive.get(nome_chave)
 
-                        if id_encontrado:
+                        if id_foto_drive:
                             try:
-                                url_download = f"https://docs.google.com/uc?export=download&id={id_encontrado}"
+                                url_download = f"https://docs.google.com/uc?export=download&id={id_foto_drive}"
                                 session = requests.Session()
                                 response_foto = session.get(url_download, stream=True, timeout=15)
                                 
@@ -247,11 +240,7 @@ if csv_file:
                                     response_foto = session.get(url_download, stream=True, timeout=15)
 
                                 if response_foto.status_code == 200:
-                                    # Usa o formato correto de imagem com base no content-type retornado
-                                    content_type = response_foto.headers.get('content-type', '')
-                                    suffix = ".png" if "png" in content_type else ".jpg"
-                                    
-                                    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as f_tmp:
+                                    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as f_tmp:
                                         f_tmp.write(response_foto.content)
                                         foto_temp_path = f_tmp.name
                                     
@@ -267,6 +256,7 @@ if csv_file:
                                 run_foto = p_foto.add_run("\n\n\n\nERRO AO BAIXAR IMAGEM\n\n\n\n")
                                 run_foto.font.size = Pt(11)
                         else:
+                            # Se o nome não bater com nenhum arquivo mapeado da pasta, fica vazio por segurança
                             run_foto = p_foto.add_run("\n\n\n\nFOTO NÃO ENCONTRADA\n\n\n\n")
                             run_foto.font.size = Pt(11)
 
