@@ -246,3 +246,4 @@ if csv_file:
 
     except Exception as e:
         st.error(f"Erro geral no processamento dos arquivos: {e}")
+ 
