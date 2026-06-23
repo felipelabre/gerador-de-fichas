@@ -11,7 +11,7 @@ st.set_page_config(
     page_title="Gerador de Fichas", page_icon="📄", layout="centered"
 )
 
-st.title("📄 Gerador de Fichas (Foco em Estabilidade)")
+st.title("📄 Gerador de Fichas (Versão Ultra-Resistente)")
 
 logo_file = st.file_uploader(
     "1. Logo do Acampamento (opcional)", type=["png", "jpg", "jpeg"]
@@ -53,36 +53,31 @@ if "word_file" not in st.session_state:
 
 if csv_file:
     try:
-        # Lendo o CSV
         try:
             df = pd.read_csv(csv_file, sep=";", encoding="utf-8-sig")
         except:
             csv_file.seek(0)
             df = pd.read_csv(csv_file, sep=";", encoding="latin1")
 
-        # Remove linhas completamente vazias que o Excel costuma gerar no fim do arquivo
         df = df.dropna(how='all')
-        
         st.success(f"{len(df)} inscrições válidas carregadas.")
 
-        # Criando o mapeamento de fotos de forma segura
         dicionario_fotos = {}
         if fotos_files:
             for foto in fotos_files:
                 if foto.name:
                     nome_sem_extensao = os.path.splitext(foto.name)[0].strip().lower()
                     dicionario_fotos[nome_sem_extensao] = foto
-            st.info(f"{len(dicionario_fotos)} fotos processadas e prontas para cruzamento.")
+            st.info(f"{len(dicionario_fotos)} fotos carregadas na memória.")
 
         if st.button("Gerar Fichas"):
-            # Variável de controle para sabermos onde o erro aconteceu se algo der errado
-            registro_atual = "Início do Processamento"
+            # Lista para rastrear fotos que falharam por estarem corrompidas
+            fotos_com_erro = []
             
             try:
-                with st.spinner("Gerando fichas... Isso pode levar um tempinho devido ao volume de fotos."):
+                with st.spinner("Gerando fichas... Processando volume de dados."):
                     doc = Document()
                     
-                    # Margens estreitas (1.5 cm)
                     sections = doc.sections
                     for section in sections:
                         section.top_margin = Cm(1.5)
@@ -110,12 +105,10 @@ if csv_file:
                     col_sacramentos = "Quais Sacramentos possui (batismo, eucaristia, crisma, matrimônio e ordem)?"
 
                     for i, row in df.iterrows():
-                        # Proteção contra linhas sem nome preenchido
                         if pd.isna(row.get(col_nome)) or str(row.get(col_nome)).strip() == "":
                             continue
 
                         nome = str(row.get(col_nome, "")).strip()
-                        registro_atual = f"Servo da linha {i+1}: {nome}"
 
                         if i > 0:
                             doc.add_page_break()
@@ -134,7 +127,7 @@ if csv_file:
                         run_titulo.bold = True
                         run_titulo.font.size = Pt(13)
 
-                        # Dados do contrato
+                        # Dados do servo
                         cidade = row.get(col_cidade, "") if pd.notna(row.get(col_cidade)) else ""
                         telefone = row.get(col_telefone, "") if pd.notna(row.get(col_telefone)) else ""
                         nascimento = row.get(col_nascimento, "") if pd.notna(row.get(col_nascimento)) else ""
@@ -189,7 +182,7 @@ if csv_file:
                         p_espaco = doc.add_paragraph()
                         p_espaco.paragraph_format.space_before = Pt(8)
 
-                        # 5. Foto
+                        # 5. Foto (COM TRATAMENTO DE ERRO INDIVIDUAL)
                         foto = doc.add_table(rows=1, cols=1)
                         foto.style = "Table Grid"
                         celula = foto.cell(0, 0)
@@ -199,18 +192,24 @@ if csv_file:
                         nome_chave = nome.lower()
                         
                         if nome_chave in dicionario_fotos:
-                            foto_file_obj = dicionario_fotos[nome_chave]
-                            ext = os.path.splitext(foto_file_obj.name)[1]
-                            
-                            with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as f_tmp:
-                                f_tmp.write(foto_file_obj.getvalue())
-                                foto_temp_path = f_tmp.name
-                            
-                            run_foto = p_foto.add_run()
-                            run_foto.add_picture(foto_temp_path, width=Inches(1.6))
-                            
-                            if os.path.exists(foto_temp_path):
-                                os.remove(foto_temp_path)
+                            try:
+                                foto_file_obj = dicionario_fotos[nome_chave]
+                                ext = os.path.splitext(foto_file_obj.name)[1]
+                                
+                                with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as f_tmp:
+                                    f_tmp.write(foto_file_obj.getvalue())
+                                    foto_temp_path = f_tmp.name
+                                
+                                run_foto = p_foto.add_run()
+                                run_foto.add_picture(foto_temp_path, width=Inches(1.6))
+                                
+                                if os.path.exists(foto_temp_path):
+                                    os.remove(foto_temp_path)
+                            except Exception:
+                                # Se a imagem der erro interno de leitura, joga no except e não quebra o app
+                                fotos_com_erro.append(nome.upper())
+                                run_foto = p_foto.add_run("\n\n\n\nERRO AO PROCESSAR IMAGEM\n\n\n\n")
+                                run_foto.font.size = Pt(11)
                         else:
                             run_foto = p_foto.add_run("\n\n\n\nFOTO NÃO ENCONTRADA\n\n\n\n")
                             run_foto.font.size = Pt(11)
@@ -230,11 +229,16 @@ if csv_file:
                     if logo_temp and os.path.exists(logo_temp):
                         os.remove(logo_temp)
                         
-                st.success("✨ Todas as fichas foram geradas com sucesso!")
+                st.success("✨ Processamento concluído!")
+                
+                # Alerta o usuário caso alguma foto específica tenha falhado
+                if fotos_com_erro:
+                    st.warning(f"⚠️ As fichas foram geradas, mas as fotos de {len(fotos_com_erro)} servos vieram corrompidas e foram puladas:")
+                    for servo_errado in fotos_com_erro:
+                        st.write(f"- {servo_errado}")
 
-            except Exception as inner_error:
-                st.error(f"Erro detectado em: **{registro_atual}**")
-                st.error(f"Detalhes do erro técnico: {inner_error}")
+            except Exception as e:
+                st.error(f"Erro crítico no loop de geração: {e}")
 
         if st.session_state.word_file is not None:
             st.download_button(
@@ -245,5 +249,4 @@ if csv_file:
             )
 
     except Exception as e:
-        st.error(f"Erro geral no processamento dos arquivos: {e}")
- 
+        st.error(f"Erro geral no processamento: {e}")
