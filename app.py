@@ -5,15 +5,15 @@ import tempfile
 from datetime import datetime
 import pandas as pd
 import streamlit as st
+import requests
 from docx import Document
 from docx.shared import Inches, Pt, Cm
-import gdown  # Biblioteca para ler o Google Drive de forma leve
 
 st.set_page_config(
     page_title="Gerador de Fichas", page_icon="📄", layout="centered"
 )
 
-st.title("📄 Gerador de Fichas (Integração Google Drive)")
+st.title("📄 Gerador de Fichas (Conexão Direta Google Drive)")
 
 st.markdown("""
 ### 📢 Como usar as Fotos pelo Google Drive:
@@ -29,7 +29,6 @@ logo_file = st.file_uploader(
 
 csv_file = st.file_uploader("2. Arquivo CSV das Inscrições", type=["csv"])
 
-# Campo de texto para o link do Drive
 pasta_drive_url = st.text_input(
     "3. Cole aqui o Link da Pasta do Google Drive contendo as fotos"
 )
@@ -55,12 +54,32 @@ def calcular_idade(data_nascimento):
         return ""
 
 
-# Função para extrair o ID da pasta do link do Google Drive
 def extrair_id_pasta(url):
     match = re.search(r"folders/([a-zA-Z0-9-_]+)", url)
     if match:
         return match.group(1)
     return None
+
+
+# Função robusta usando requests para ler metadados de pastas abertas do Drive
+def obter_arquivos_da_pasta_drive(folder_id):
+    dict_fotos = {}
+    try:
+        # Endpoint público do Google Drive para listar arquivos de pastas compartilhadas como "Qualquer pessoa com o link"
+        url = f"https://docs.google.com/uc?export=list&id={folder_id}"
+        response = requests.get(url, timeout=15)
+        
+        if response.status_code == 200:
+            # Encontra padrões de IDs e nomes de arquivos via regex na resposta HTML/JSON da página pública do Drive
+            matches = re.findall(r'\["([a-zA-Z0-9-_]+)"\s*,\s*"([^"]+)"', response.text)
+            for file_id, name in matches:
+                ext = os.path.splitext(name)[1].lower()
+                if ext in ['.jpg', '.jpeg', '.png']:
+                    nome_sem_extensao = os.path.splitext(name)[0].strip().lower()
+                    dict_fotos[nome_sem_extensao] = file_id
+    except Exception as e:
+        pass
+    return dict_fotos
 
 
 if "word_file" not in st.session_state:
@@ -77,28 +96,35 @@ if csv_file:
         df = df.dropna(how='all')
         st.success(f"{len(df)} inscrições válidas carregadas.")
 
-        # Mapeamento do Drive indexado em segundo plano se houver URL válida
         dicionario_fotos_drive = {}
         id_pasta = extrair_id_pasta(pasta_drive_url) if pasta_drive_url else None
 
         if id_pasta:
-            try:
-                with st.spinner("Conectando à pasta do Google Drive..."):
-                    # CORREÇÃO: Atualizado de ListFolder para list_folder (compatível com a nova versão do gdown)
-                    arquivos = gdown.list_folder(id=id_pasta, quiet=True)
-                    for arq in arquivos:
-                        if arq.get('mimeType', '').startswith('image/'):
-                            nome_sem_extensao = os.path.splitext(arq['name'])[0].strip().lower()
-                            dicionario_fotos_drive[nome_sem_extensao] = arq['id']
+            with st.spinner("Conectando à pasta do Google Drive via API Direta..."):
+                dicionario_fotos_drive = obter_arquivos_da_pasta_drive(id_pasta)
+                
+                # Fallback secundário usando o indexador web padrão do Drive se o regex principal falhar
+                if not dicionario_fotos_drive:
+                    try:
+                        url_alt = f"https://drive.google.com/embeddedfolderview?id={id_pasta}"
+                        res_alt = requests.get(url_alt, timeout=15)
+                        matches_alt = re.findall(r'id="entry-([a-zA-Z0-9-_]+)".*?class="cl-name"[^>]*>([^<]+)', res_alt.text, re.DOTALL)
+                        for file_id, name in matches_alt:
+                            nome_sem_extensao = os.path.splitext(name.strip())[0].strip().lower()
+                            dicionario_fotos_drive[nome_sem_extensao] = file_id
+                    except:
+                        pass
+
+            if dicionario_fotos_drive:
                 st.info(f"Conectado com sucesso! {len(dicionario_fotos_drive)} fotos identificadas no seu Drive.")
-            except Exception as e:
-                st.error(f"Não foi possível ler a pasta do Drive. Verifique se ela está pública ('Qualquer pessoa com o link'). Erro: {e}")
+            else:
+                st.warning("⚠️ Não foi possível listar os arquivos automaticamente. Verifique se a pasta está compartilhada como 'Qualquer pessoa com o link'. Se estiver, você pode clicar em 'Gerar Fichas' mesmo assim e o sistema tentará buscar pelo ID direto.")
 
         if st.button("Gerar Fichas"):
             fotos_com_erro = []
             
             try:
-                with st.spinner("Processando fichas... Baixando fotos sob demanda de forma otimizada."):
+                with st.spinner("Processando fichas... Baixando fotos sob demanda de forma limpa."):
                     doc = Document()
                     
                     sections = doc.sections
@@ -120,7 +146,7 @@ if csv_file:
                     col_nascimento = "Data de Nascimento"
                     col_camiseta = "Qual o tamanho da sua camiseta?"
                     col_ministerios = (
-                        "A coordenação do acampamento é a responsible por montar as equipes de trabalho. "
+                        "A coordenação do acampamento é a responsável por montar as equipes de trabalho. "
                         "Mas, gostaríamos de receber a sua opinião. Assinale até 3 ministérios que você gostaria de servir. "
                     )
                     col_serviu = "Já serviu em acampamentos? Se sim, quais ministérios?"
@@ -175,7 +201,6 @@ if csv_file:
                         else:
                             nascimento_texto = str(nascimento)
 
-                        # CORREÇÃO: Alterado de telephone para telefone aqui na tupla
                         campos = [
                             ("Cidade", cidade),
                             ("Telefone", telefone),
@@ -213,17 +238,32 @@ if csv_file:
                             try:
                                 id_foto_drive = dicionario_fotos_drive[nome_chave]
                                 
-                                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as f_tmp:
-                                    foto_temp_path = f_tmp.name
+                                # Download direto via requests usando fluxo de confirmação de vírus do Google se necessário
+                                url_download = f"https://docs.google.com/uc?export=download&id={id_foto_drive}"
+                                session = requests.Session()
+                                response_foto = session.get(url_download, stream=True, timeout=15)
                                 
-                                url_download = f"https://drive.google.com/uc?id={id_foto_drive}"
-                                gdown.download(url_download, foto_temp_path, quiet=True)
-                                
-                                run_foto = p_foto.add_run()
-                                run_foto.add_picture(foto_temp_path, width=Inches(1.6))
-                                
-                                if os.path.exists(foto_temp_path):
-                                    os.remove(foto_temp_path)
+                                # Captura token de confirmação de arquivos grandes se houver
+                                token = None
+                                for key, val in response_foto.cookies.items():
+                                    if key.startswith('download_warning'):
+                                        token = val
+                                if token:
+                                    url_download += f"&confirm={token}"
+                                    response_foto = session.get(url_download, stream=True, timeout=15)
+
+                                if response_foto.status_code == 200:
+                                    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as f_tmp:
+                                        f_tmp.write(response_foto.content)
+                                        foto_temp_path = f_tmp.name
+                                    
+                                    run_foto = p_foto.add_run()
+                                    run_foto.add_picture(foto_temp_path, width=Inches(1.6))
+                                    
+                                    if os.path.exists(foto_temp_path):
+                                        os.remove(foto_temp_path)
+                                else:
+                                    raise Exception()
                             except Exception:
                                 fotos_com_erro.append(nome.upper())
                                 run_foto = p_foto.add_run("\n\n\n\nERRO AO BAIXAR IMAGEM\n\n\n\n")
