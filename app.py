@@ -13,14 +13,7 @@ st.set_page_config(
     page_title="Gerador de Fichas", page_icon="📄", layout="centered"
 )
 
-st.title("📄 Gerador de Fichas (Precisão de Fotos)")
-
-st.markdown("""
-### 📢 Como usar as Fotos pelo Google Drive:
-1. Deixe todas as fotos direto na pasta do **Google Drive** (sem subpastas).
-2. Garanta que o nome de cada arquivo seja o nome exato do servo (ex: `Nome do Servo.jpg`).
-3. Compartilhe a pasta como **"Qualquer pessoa com o link"** (Leitor).
-""")
+st.title("📄 Gerador de Fichas Oficial")
 
 logo_file = st.file_uploader(
     "1. Logo do Acampamento (opcional)", type=["png", "jpg", "jpeg"]
@@ -29,7 +22,13 @@ logo_file = st.file_uploader(
 csv_file = st.file_uploader("2. Arquivo CSV das Inscrições", type=["csv"])
 
 pasta_drive_url = st.text_input(
-    "3. Cole aqui o Link da Pasta do Google Drive contendo as fotos"
+    "3. Link da Pasta do Google Drive (Compartilhada como 'Qualquer pessoa com o link')"
+)
+
+# NOVO: Campo seguro para colocar a API Key que desbloqueia a listagem do Google
+api_key = st.text_input(
+    "4. Cole aqui sua Google API Key (Necessária para ler as fotos com segurança)", 
+    type="password"
 )
 
 titulo_acampamento = st.text_input(
@@ -48,7 +47,7 @@ def calcular_idade(data_nascimento):
         idade = hoje.year - nascimento.year
         if (hoje.month, hoje.day) < (nascimento.month, nascimento.day):
             idade -= 1
-        return iidade
+        return idade
     except:
         return ""
 
@@ -60,24 +59,26 @@ def extrair_id_pasta(url):
     return None
 
 
-# Nova função de varredura cirúrgica usando a API estruturada do Drive para pastas públicas
-def mapear_pasta_drive_total(folder_id):
+# Função oficial usando a API do Google para listar arquivos sem bloqueios
+def obter_arquivos_via_api(folder_id, key):
     dict_fotos = {}
     try:
-        # Pede os metadados brutos da pasta ao Google de forma pública
-        url = f"https://docs.google.com/uc?export=list&id={folder_id}"
-        response = requests.get(url, timeout=15)
-        
-        if response.status_code == 200:
-            # Captura a lista real de arquivos injetada na página estruturada do Drive
-            dados_arquivos = re.findall(r'\["([a-zA-Z0-9-_]+)"\s*,\s*"([^"]+)"', response.text)
-            for file_id, name in dados_arquivos:
-                ext = os.path.splitext(name)[1].lower()
-                if ext in ['.jpg', '.jpeg', '.png']:
-                    nome_limpo = os.path.splitext(name.strip())[0].strip().lower()
-                    dict_fotos[nome_limpo] = file_id
-    except:
-        pass
+        url = f"https://www.googleapis.com/drive/v3/files"
+        params = {
+            "q": f"'{folder_id}' in parents and trashed = false",
+            "fields": "files(id, name, mimeType)",
+            "pageSize": 1000,
+            "key": key
+        }
+        res = requests.get(url, params=params, timeout=15)
+        if res.status_code == 200:
+            arquivos = res.json().get("files", [])
+            for arq in arquivos:
+                if arq.get("mimeType", "").startswith("image/"):
+                    nome_sem_ext = os.path.splitext(arq["name"].strip())[0].strip().lower()
+                    dict_fotos[nome_sem_ext] = arq["id"]
+    except Exception as e:
+        st.error(f"Erro na API do Google: {e}")
     return dict_fotos
 
 
@@ -95,24 +96,28 @@ if csv_file:
         df = df.dropna(how='all')
         st.success(f"{len(df)} inscrições válidas carregadas.")
 
-        # Faz o mapeamento inicial absoluto das fotos
         dicionario_fotos_drive = {}
         id_pasta = extrair_id_pasta(pasta_drive_url) if pasta_drive_url else None
 
-        if id_pasta:
-            with st.spinner("Mapeando arquivos do Google Drive..."):
-                dicionario_fotos_drive = mapear_pasta_drive_total(id_pasta)
+        if id_pasta and api_key:
+            with st.spinner("Conectando de forma oficial à pasta do Drive..."):
+                dicionario_fotos_drive = obter_arquivos_via_api(id_pasta, api_key)
             
             if dicionario_fotos_drive:
-                st.info(f"Sucesso! {len(dicionario_fotos_drive)} fotos identificadas e vinculadas aos nomes correspondentes.")
+                st.info(f"✨ Conectado! {len(dicionario_fotos_drive)} fotos indexadas perfeitamente por nome.")
             else:
-                st.warning("⚠️ O Google impediu a listagem automática de segurança. Certifique-se de que a pasta está compartilhada como 'Qualquer pessoa com o link'.")
+                st.error("❌ Nenhuma foto encontrada ou API Key inválida. Verifique se as fotos estão direto na pasta e se a chave está correta.")
+        elif id_pasta and not api_key:
+            st.warning("⚠️ Insira a Google API Key no campo 4 para conseguir carregar as fotos.")
 
-        if st.button("Gerar Fichas"):
+        if st.button("Gerar Fichas") and df is not None:
+            if id_pasta and not dicionario_fotos_drive:
+                st.warning("Gerando sem fotos pois o mapeamento do Drive não foi concluído.")
+                
             fotos_com_erro = []
             
             try:
-                with st.spinner("Gerando fichas... Como são 508 registros com imagens, isso vai levar de 2 a 4 minutos. Não feche a aba."):
+                with st.spinner("Processando 508 fichas... Aguarde a conclusão total."):
                     doc = Document()
                     
                     sections = doc.sections
@@ -221,10 +226,8 @@ if csv_file:
                         p_foto.alignment = 1
 
                         nome_chave = nome.lower()
-                        
-                        # CHECAGEM DE SEGURANÇA: Só baixa a imagem se o ID pertencer especificamente a este servo no dicionário
                         id_foto_drive = dicionario_fotos_drive.get(nome_chave)
-
+                        
                         if id_foto_drive:
                             try:
                                 url_download = f"https://docs.google.com/uc?export=download&id={id_foto_drive}"
@@ -256,7 +259,6 @@ if csv_file:
                                 run_foto = p_foto.add_run("\n\n\n\nERRO AO BAIXAR IMAGEM\n\n\n\n")
                                 run_foto.font.size = Pt(11)
                         else:
-                            # Se o nome não bater com nenhum arquivo mapeado da pasta, fica vazio por segurança
                             run_foto = p_foto.add_run("\n\n\n\nFOTO NÃO ENCONTRADA\n\n\n\n")
                             run_foto.font.size = Pt(11)
 
@@ -277,7 +279,7 @@ if csv_file:
                 st.success("✨ Processamento concluído com sucesso!")
                 
                 if fotos_com_erro:
-                    st.warning(f"⚠️ As fichas foram geradas, mas {len(fotos_com_erro)} fotos falharam no download:")
+                    st.warning(f"⚠️ {len(fotos_com_erro)} fotos falharam no download:")
                     for servo_errado in fotos_com_erro:
                         st.write(f"- {servo_errado}")
 
@@ -294,3 +296,4 @@ if csv_file:
 
     except Exception as e:
         st.error(f"Erro geral no processamento: {e}")
+        
