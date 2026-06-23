@@ -13,14 +13,13 @@ st.set_page_config(
     page_title="Gerador de Fichas", page_icon="📄", layout="centered"
 )
 
-st.title("📄 Gerador de Fichas (Conexão Direta Google Drive)")
+st.title("📄 Gerador de Fichas (Busca Direta)")
 
 st.markdown("""
 ### 📢 Como usar as Fotos pelo Google Drive:
-1. Junte todas as fotos dos servos em uma pasta no seu **Google Drive**.
-2. Garanta que o nome de cada arquivo de foto seja o nome do servo (ex: `Nome do Servo.jpg`).
-3. Clique com o botão direito na pasta no Drive ➡️ **Compartilhar** ➡️ mude para **"Qualquer pessoa com o link"** (como Leitor).
-4. Copie o link da pasta e cole no campo abaixo.
+1. Deixe todas as fotos direto na pasta do **Google Drive** (sem subpastas).
+2. Garanta que o nome de cada arquivo seja o nome exato do servo (ex: `Nome do Servo.jpg` ou `Nome do Servo.png`).
+3. Compartilhe a pasta como **"Qualquer pessoa com o link"** (Leitor).
 """)
 
 logo_file = st.file_uploader(
@@ -61,23 +60,18 @@ def extrair_id_pasta(url):
     return None
 
 
-# Função robusta usando requests para ler metadados de pastas abertas do Drive
+# Função que tenta buscar e indexar varrendo a estrutura pública de visualização do Drive
 def obter_arquivos_da_pasta_drive(folder_id):
     dict_fotos = {}
     try:
-        # Endpoint público do Google Drive para listar arquivos de pastas compartilhadas como "Qualquer pessoa com o link"
-        url = f"https://docs.google.com/uc?export=list&id={folder_id}"
-        response = requests.get(url, timeout=15)
-        
-        if response.status_code == 200:
-            # Encontra padrões de IDs e nomes de arquivos via regex na resposta HTML/JSON da página pública do Drive
-            matches = re.findall(r'\["([a-zA-Z0-9-_]+)"\s*,\s*"([^"]+)"', response.text)
-            for file_id, name in matches:
-                ext = os.path.splitext(name)[1].lower()
-                if ext in ['.jpg', '.jpeg', '.png']:
-                    nome_sem_extensao = os.path.splitext(name)[0].strip().lower()
-                    dict_fotos[nome_sem_extensao] = file_id
-    except Exception as e:
+        url_alt = f"https://drive.google.com/embeddedfolderview?id={folder_id}"
+        res_alt = requests.get(url_alt, timeout=15)
+        # Regex aprimorado para capturar nomes e IDs direto do HTML estruturado do Drive
+        matches_alt = re.findall(r'id="entry-([a-zA-Z0-9-_]+)".*?class="cl-name"[^>]*>([^<]+)', res_alt.text, re.DOTALL)
+        for file_id, name in matches_alt:
+            nome_sem_extensao = os.path.splitext(name.strip())[0].strip().lower()
+            dict_fotos[nome_sem_extensao] = file_id
+    except:
         pass
     return dict_fotos
 
@@ -100,31 +94,19 @@ if csv_file:
         id_pasta = extrair_id_pasta(pasta_drive_url) if pasta_drive_url else None
 
         if id_pasta:
-            with st.spinner("Conectando à pasta do Google Drive via API Direta..."):
+            with st.spinner("Conectando à pasta do Google Drive..."):
                 dicionario_fotos_drive = obter_arquivos_da_pasta_drive(id_pasta)
-                
-                # Fallback secundário usando o indexador web padrão do Drive se o regex principal falhar
-                if not dicionario_fotos_drive:
-                    try:
-                        url_alt = f"https://drive.google.com/embeddedfolderview?id={id_pasta}"
-                        res_alt = requests.get(url_alt, timeout=15)
-                        matches_alt = re.findall(r'id="entry-([a-zA-Z0-9-_]+)".*?class="cl-name"[^>]*>([^<]+)', res_alt.text, re.DOTALL)
-                        for file_id, name in matches_alt:
-                            nome_sem_extensao = os.path.splitext(name.strip())[0].strip().lower()
-                            dicionario_fotos_drive[nome_sem_extensao] = file_id
-                    except:
-                        pass
-
+            
             if dicionario_fotos_drive:
-                st.info(f"Conectado com sucesso! {len(dicionario_fotos_drive)} fotos identificadas no seu Drive.")
+                st.info(f"Conectado! {len(dicionario_fotos_drive)} fotos pré-mapeadas.")
             else:
-                st.warning("⚠️ Não foi possível listar os arquivos automaticamente. Verifique se a pasta está compartilhada como 'Qualquer pessoa com o link'. Se estiver, você pode clicar em 'Gerar Fichas' mesmo assim e o sistema tentará buscar pelo ID direto.")
+                st.warning("⚠️ O Google limitou a listagem automática prévia. O sistema fará a busca individual direta por nome de cada servo ao clicar no botão.")
 
         if st.button("Gerar Fichas"):
             fotos_com_erro = []
             
             try:
-                with st.spinner("Processando fichas... Baixando fotos sob demanda de forma limpa."):
+                with st.spinner("Processando fichas... Buscando e baixando imagens."):
                     doc = Document()
                     
                     sections = doc.sections
@@ -233,17 +215,29 @@ if csv_file:
                         p_foto.alignment = 1
 
                         nome_chave = nome.lower()
+                        id_foto_drive = dicionario_fotos_drive.get(nome_chave)
                         
-                        if nome_chave in dicionario_fotos_drive:
+                        # ESTRATÉGIA DE BUSCA DINÂMICA CASO A LISTAGEM DO GOOGLE TENHA FALHADO
+                        id_encontrado = None
+                        if id_foto_drive:
+                            id_encontrado = id_foto_drive
+                        elif id_pasta:
+                            # Se a listagem falhou, tentamos forçar a varredura da foto individual pelo nome exato do servo via Web View
                             try:
-                                id_foto_drive = dicionario_fotos_drive[nome_chave]
-                                
-                                # Download direto via requests usando fluxo de confirmação de vírus do Google se necessário
-                                url_download = f"https://docs.google.com/uc?export=download&id={id_foto_drive}"
+                                url_busca = f"https://drive.google.com/embeddedfolderview?id={id_pasta}&q={nome_chave}"
+                                res_busca = requests.get(url_busca, timeout=5)
+                                match_id = re.search(r'id="entry-([a-zA-Z0-9-_]+)"', res_busca.text)
+                                if match_id:
+                                    id_encontrado = match_id.group(1)
+                            except:
+                                pass
+
+                        if id_encontrado:
+                            try:
+                                url_download = f"https://docs.google.com/uc?export=download&id={id_encontrado}"
                                 session = requests.Session()
                                 response_foto = session.get(url_download, stream=True, timeout=15)
                                 
-                                # Captura token de confirmação de arquivos grandes se houver
                                 token = None
                                 for key, val in response_foto.cookies.items():
                                     if key.startswith('download_warning'):
@@ -253,7 +247,11 @@ if csv_file:
                                     response_foto = session.get(url_download, stream=True, timeout=15)
 
                                 if response_foto.status_code == 200:
-                                    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as f_tmp:
+                                    # Usa o formato correto de imagem com base no content-type retornado
+                                    content_type = response_foto.headers.get('content-type', '')
+                                    suffix = ".png" if "png" in content_type else ".jpg"
+                                    
+                                    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as f_tmp:
                                         f_tmp.write(response_foto.content)
                                         foto_temp_path = f_tmp.name
                                     
