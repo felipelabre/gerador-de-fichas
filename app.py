@@ -29,7 +29,7 @@ logo_file = st.file_uploader(
 
 csv_file = st.file_uploader("2. Arquivo CSV das Inscrições", type=["csv"])
 
-# Campo de texto para o link do Drive substituindo o uploader pesado
+# Campo de texto para o link do Drive
 pasta_drive_url = st.text_input(
     "3. Cole aqui o Link da Pasta do Google Drive contendo as fotos"
 )
@@ -84,8 +84,8 @@ if csv_file:
         if id_pasta:
             try:
                 with st.spinner("Conectando à pasta do Google Drive..."):
-                    # Lista os arquivos da pasta de forma extremamente leve, sem baixá-los ainda
-                    arquivos = gdown.ListFolder(id=id_pasta, quiet=True)
+                    # CORREÇÃO: Atualizado de ListFolder para list_folder (compatível com a nova versão do gdown)
+                    arquivos = gdown.list_folder(id=id_pasta, quiet=True)
                     for arq in arquivos:
                         if arq.get('mimeType', '').startswith('image/'):
                             nome_sem_extensao = os.path.splitext(arq['name'])[0].strip().lower()
@@ -120,7 +120,7 @@ if csv_file:
                     col_nascimento = "Data de Nascimento"
                     col_camiseta = "Qual o tamanho da sua camiseta?"
                     col_ministerios = (
-                        "A coordenação do acampamento é a responsável por montar as equipes de trabalho. "
+                        "A coordenação do acampamento é a responsible por montar as equipes de trabalho. "
                         "Mas, gostaríamos de receber a sua opinião. Assinale até 3 ministérios que você gostaria de servir. "
                     )
                     col_serviu = "Já serviu em acampamentos? Se sim, quais ministérios?"
@@ -175,9 +175,10 @@ if csv_file:
                         else:
                             nascimento_texto = str(nascimento)
 
+                        # CORREÇÃO: Alterado de telephone para telefone aqui na tupla
                         campos = [
                             ("Cidade", cidade),
-                            ("Telefone", telephone),
+                            ("Telefone", telefone),
                             ("Nascimento / Idade", nascimento_texto),
                             ("Tamanho Camiseta", camiseta),
                             ("Ministérios Desejados", ministerios),
@@ -208,23 +209,19 @@ if csv_file:
 
                         nome_chave = nome.lower()
                         
-                        # BUSCA E DOWNLOAD INDIVIDUAL DA FOTO DO SERVO (EVITA OUT OF MEMORY)
                         if nome_chave in dicionario_fotos_drive:
                             try:
                                 id_foto_drive = dicionario_fotos_drive[nome_chave]
                                 
-                                # Baixa apenas a foto deste servo em um arquivo temporário físico
                                 with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as f_tmp:
                                     foto_temp_path = f_tmp.name
                                 
-                                # Faz o download do Drive direto para o arquivo temporário
                                 url_download = f"https://drive.google.com/uc?id={id_foto_drive}"
                                 gdown.download(url_download, foto_temp_path, quiet=True)
                                 
                                 run_foto = p_foto.add_run()
                                 run_foto.add_picture(foto_temp_path, width=Inches(1.6))
                                 
-                                # Deleta a foto do servidor imediatamente após anexar no Word para liberar memória RAM
                                 if os.path.exists(foto_temp_path):
                                     os.remove(foto_temp_path)
                             except Exception:
